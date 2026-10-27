@@ -1,0 +1,265 @@
+﻿<Window x:Name="MainWindow" Title="Создание слайд-шоу" x:Class="SlideShowMaker.MainWindowClass"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converter="clr-namespace:SlideShowMaker.Converters"
+        xmlns:validation="clr-namespace:SlideShowMaker.ValidationRules"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        mc:Ignorable="d"
+        MinHeight="500" MinWidth="650" Background="#19191C" AllowDrop="True"
+        DragEnter="Window_DragEnter"
+        Drop="Window_Drop">
+
+    <Window.DataContext>
+        <Binding RelativeSource="{RelativeSource Self}"/>
+    </Window.DataContext>
+
+    <Window.Resources>
+        <converter:FractionConverter x:Key="FractionConverter"/>
+        <converter:EqualityToVisibilityConverter x:Key="EqtVConverter"/>
+        <converter:EqualityToVisibilityConverter x:Key="IEqtVConverter" Inverse="True"/>
+        <converter:EqualityToBoolConverter x:Key="IEqtBConverter" Inverse="True"/>
+        <converter:DoubleToTimeString x:Key="DtTsConverter"/>
+    </Window.Resources>
+
+    <Grid Margin="4">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <GroupBox Header="Входные данные" Margin="0,0,4,0">
+            <Grid>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="4"/>
+                    <RowDefinition Height="24"/>
+                </Grid.RowDefinitions>
+
+                <ListView MinWidth="200" MinHeight="50" d:SelectedIndex="0"
+                  PreviewMouseLeftButtonDown="ImageList_PreviewMouseLeftButtonDown"
+                  PreviewMouseMove="ImageList_PreviewMouseMove"
+                  Drop="ImageList_Drop"
+                  ItemsSource="{Binding ImagePaths}">
+                    <d:ListView.ItemsSource>
+                        <x:Array Type="{x:Type sys:String}">
+                            <sys:String>C:\Users\Alpha812\Desktop\Showcase\1.jpg</sys:String>
+                            <sys:String>C:\Users\Alpha812\Desktop\Showcase\2.jpg</sys:String>
+                            <sys:String>C:\Users\Alpha812\Desktop\Showcase\3.jpg</sys:String>
+                        </x:Array>
+                    </d:ListView.ItemsSource>
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn>
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Image Source="{Binding}" Width="75" Height="75" Stretch="Uniform"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Path" DisplayMemberBinding="{Binding}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+                <Button Content="Обзор" ToolTip="Выбрать файлы в окне проводника"
+                HorizontalAlignment="Right" Grid.Row="2" BorderBrush="#006464" Width="75" BorderThickness="1.5,1,1.5,1"
+                Click="ExplorerButton_Click"/>
+                <Button Content="❌" ToolTip="Очистить список изображений"
+                HorizontalAlignment="Left" Grid.Row="2" Width="24" Foreground="Red"
+                Click="ClearButton_Click"/>
+            </Grid>
+        </GroupBox>
+        <GroupBox Header="Настройки слайд-шоу" Grid.Row="1" HorizontalAlignment="Left">
+            <StackPanel>
+
+                <StackPanel ToolTip="Определяет длительность показа 1 слайда в секундах" Orientation="Horizontal" Margin="0,2">
+                    <TextBlock Text="Длительность слайда:" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding SlideDuration, Converter={StaticResource FractionConverter}}" d:Text="7" Width="40" Margin="4,0" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <CheckBox Content="Переходы" ToolTip="Отвечает за наличие переходов. Не отмечено - переходы отсутствуют; квадратик - только cross-fade; галочка - cross-fade + затемнение" IsThreeState="True" IsChecked="{Binding Fade}" d:IsChecked="True" Margin="0,2"/>
+
+                <StackPanel ToolTip="Определяет длительность перехода в секундах"
+                            Orientation="Horizontal" Margin="0,2" d:Visibility="Visible"
+                            Visibility="{Binding Fade, Converter={StaticResource IEqtVConverter}, ConverterParameter='False'}">
+                    <TextBlock Text="Длительность перехода:" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding FadeDuration, Converter={StaticResource FractionConverter}}" d:Text="1" Width="40" Margin="4,0" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel ToolTip="Определяет частоту кадров в слайд-шоу" Orientation="Horizontal"  Margin="0,2">
+                    <TextBlock Text="FPS:" VerticalAlignment="Center"/>
+                    <Slider Value="{Binding Fps, Converter={StaticResource FractionConverter}, ConverterParameter='1'}" Width="130" LargeChange="10" SmallChange="1" d:Value="60"
+                    Maximum="240" Minimum=".1" TickFrequency=".1" IsSnapToTickEnabled="True" Margin="4,0" VerticalAlignment="Center"/>
+                    <TextBox Width="40" Validation.ErrorTemplate="{StaticResource ValidationFailTemplate}" d:Text="60" VerticalAlignment="Center">
+                        <Binding Path="Fps" Converter="{StaticResource FractionConverter}">
+                            <Binding.ValidationRules>
+                                <validation:NotEmptyRule/>
+                                <validation:FractionCheck/>
+                                <validation:RangeRule ValidationStep="ConvertedProposedValue" Min="0" Max="240"/>
+                            </Binding.ValidationRules>
+                        </Binding>
+                    </TextBox>
+                </StackPanel>
+
+            </StackPanel>
+        </GroupBox>
+        <GroupBox Header="Настройки кодирования" Grid.Row="2" HorizontalAlignment="Left">
+            <StackPanel>
+                <StackPanel ToolTip="Определяет где, под каким именем и с каким расширением будет сохранено слайд-шоу" Orientation="Horizontal" Margin="0,2">
+                    <TextBlock Text="Выходной файл:" VerticalAlignment="Center"/>
+
+                    <TextBox ToolTip="Определяет где будет сохранено слайд-шоу" Margin="4,0,0,0" Validation.ErrorTemplate="{StaticResource ValidationFailTemplate}" d:Text=".\" VerticalAlignment="Center">
+                        <Binding Path="OutDirectory">
+                            <Binding.ValidationRules>
+                                <validation:NotEmptyRule/>
+                                <validation:FolderExistenceRule/>
+                            </Binding.ValidationRules>
+                        </Binding>
+                    </TextBox>
+
+                    <TextBox ToolTip="Определяет под каким именем будет сохранено слайд-шоу" Validation.ErrorTemplate="{StaticResource ValidationFailTemplate}" d:Text="out" VerticalAlignment="Center">
+                        <Binding Path="OutFile">
+                            <Binding.ValidationRules>
+                                <validation:NotEmptyRule/>
+                            </Binding.ValidationRules>
+                        </Binding>
+                    </TextBox>
+
+                    <ComboBox ToolTip="Определяет с каким расширением будет сохранено слайд-шоу" SelectedItem="{Binding OutExtension}" d:SelectedItem=".avifs" Padding="6,2.52,5,2.52" SelectedIndex="0" VerticalAlignment="Center">
+                        <sys:String>.avifs</sys:String>
+                        <sys:String>.webp</sys:String>
+                        <sys:String>.apng</sys:String>
+                        <sys:String>.gif</sys:String>
+                        <sys:String>.mp4</sys:String>
+                        <sys:String>.avi</sys:String>
+                        <sys:String>.mkv</sys:String>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel ToolTip="Определяет степень сжатия, чем выше значение, тем ниже качество и меньше размер файла" Orientation="Horizontal"  Margin="0,2">
+                    <StackPanel.Visibility>
+                        <Binding Path="OutExtension">
+                            <Binding.Converter>
+                                <converter:OneOfEqualityToVisibilityConverter/>
+                            </Binding.Converter>
+                            <Binding.ConverterParameter>
+                                <x:Array Type="sys:String">
+                                    <sys:String>.avifs</sys:String>
+                                    <sys:String>.mp4</sys:String>
+                                    <sys:String>.mkv</sys:String>
+                                </x:Array>
+                            </Binding.ConverterParameter>
+                        </Binding>
+                    </StackPanel.Visibility>
+                    <TextBlock Text="CRF:" VerticalAlignment="Center"/>
+                    <Slider Value="{Binding Crf}" Width="130" LargeChange="4" SmallChange="1" d:Value="26" Maximum="63"
+                            TickFrequency="1" IsSnapToTickEnabled="True" Margin="4,0" VerticalAlignment="Center"/>
+                    <TextBox Width="40" Validation.ErrorTemplate="{StaticResource ValidationFailTemplate}" d:Text="26" VerticalAlignment="Center">
+                        <Binding Path="Crf">
+                            <Binding.ValidationRules>
+                                <validation:NotEmptyRule/>
+                                <validation:RangeRule ValidationStep="ConvertedProposedValue" Min="0" Max="63"/>
+                            </Binding.ValidationRules>
+                        </Binding>
+                    </TextBox>
+                </StackPanel>
+                
+                <StackPanel ToolTip="Определяет цветовое пространство в котором будет слайд-шоу"
+                            Orientation="Horizontal" Margin="0,2" d:Visibility="Visible">
+                    <StackPanel.Visibility>
+                        <Binding Path="OutExtension">
+                            <Binding.Converter>
+                                <converter:OneOfEqualityToVisibilityConverter Inverse="True"/>
+                            </Binding.Converter>
+                            <Binding.ConverterParameter>
+                                <x:Array Type="sys:String">
+                                    <sys:String>.apng</sys:String>
+                                    <sys:String>.gif</sys:String>
+                                </x:Array>
+                            </Binding.ConverterParameter>
+                        </Binding>
+                    </StackPanel.Visibility>
+                    <TextBlock Text="Цветовое пространство:" VerticalAlignment="Center"/>
+                    <ComboBox Padding="6,2.52,5,2.52" Margin="4,0" SelectedIndex="1" VerticalAlignment="Center" SelectedItem="{Binding ColorFormat}">
+                        <sys:String>rgb</sys:String>
+                        <sys:String>yuv444p</sys:String>
+                        <sys:String>yuv422p</sys:String>
+                        <sys:String>yuv420p</sys:String>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel ToolTip="Определяет качество сжатия, чем ниже значение, тем меньше размер файла и дольше обработка"
+                            Orientation="Horizontal" Margin="0,2" d:Visibility="Visible"
+                            Visibility="{Binding OutExtension, Converter={StaticResource EqtVConverter}, ConverterParameter='.avifs'}">
+                    <TextBlock Text="Скорость:" VerticalAlignment="Center"/>
+                    <Slider Value="{Binding Speed}" Width="130" LargeChange="2" SmallChange="1" TickFrequency="1" IsSnapToTickEnabled="True"
+                                d:Value="4" Maximum="8" Margin="4,0" VerticalAlignment="Center"/>
+                    <TextBox Width="40" Validation.ErrorTemplate="{StaticResource ValidationFailTemplate}" d:Text="4" VerticalAlignment="Center">
+                        <Binding Path="Speed">
+                            <Binding.ValidationRules>
+                                <validation:NotEmptyRule/>
+                            </Binding.ValidationRules>
+                        </Binding>
+                    </TextBox>
+                </StackPanel>
+
+
+                <StackPanel ToolTip="Определяет какой кодек используется для кодирования видео" Orientation="Horizontal" Margin="0,2"
+                            Visibility="{Binding OutExtension, Converter={StaticResource EqtVConverter}, ConverterParameter='.mp4'}">
+                    <TextBlock Text="Кодек:" VerticalAlignment="Center"/>
+                    <ComboBox Padding="6,2.52,5,2.52" Margin="4,0" SelectedIndex="1" VerticalAlignment="Center" SelectedItem="{Binding Codec}">
+                        <sys:String>h264</sys:String>
+                        <sys:String>hevc</sys:String>
+                    </ComboBox>
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+        <GroupBox Header="Результат" Grid.Column="1" Grid.RowSpan="3">
+            <Grid>
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="30"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Label Content="_Команда FFmpeg" Target="{Binding ElementName=CommandBox}"/>
+                <TextBlock Text="Копировать" ToolTip="Копирует команду в буфер обмена" HorizontalAlignment="Right" Margin="0,0,3,0" MouseDown="CopyButton_Click" Grid.Column="2"/>
+                <TextBox Name="CommandBox" Text="{Binding Command, StringFormat='ffmpeg {0}', TargetNullValue='', Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" Grid.Row="1" Grid.ColumnSpan="3" Margin="0,0,0,4"/>
+                <Button Content="Запустить" ToolTip="Запускает процесс FFmpeg с сгенерированной командой" BorderBrush="Green"
+                        Grid.Row="2" Grid.Column="2" Height="24" VerticalAlignment="Top" Click="RunButton_Click"
+                        IsEnabled="{Binding Command, Converter={StaticResource IEqtBConverter}, ConverterParameter='null'}"
+                        Visibility="{Binding Proc, Converter={StaticResource EqtVConverter}, ConverterParameter='null'}">
+                </Button>
+                <Button Content="Остановить" ToolTip="Преждевременно завершает процесс FFmpeg" BorderBrush="Red"
+                        Grid.Row="2" Grid.Column="2" Height="24" VerticalAlignment="Top" Click="StopButton_Click" IsCancel="True"
+                        Visibility="{Binding Proc, Converter={StaticResource IEqtVConverter}, ConverterParameter='null'}">
+                </Button>
+                <StackPanel Background="#1C1920" Grid.Row="2"
+                            Visibility="{Binding Proc, Converter={StaticResource IEqtVConverter}, ConverterParameter='null'}">
+                    <ProgressBar ToolTip="{Binding CurrentTime, Converter={StaticResource DtTsConverter}, StringFormat='Обработано: {0}'}" Maximum="{Binding TotalDuration}" Value="{Binding CurrentTime}" Height="24"/>
+                    <Grid>
+                        <TextBlock Text="{Binding CurrentSpeed, StringFormat='Скорость: {0}'}" HorizontalAlignment="Left"/>
+                        <TextBlock Text="{Binding CurrentTime, Converter={StaticResource DtTsConverter}, StringFormat='Обработано: {0}'}" HorizontalAlignment="Right"/>
+                    </Grid>
+                    <TextBlock Text="{Binding CurrentSize, StringFormat='Размер файла: {0}'}"/>
+                    <TextBlock Text="{Binding CurrentBitrate, StringFormat='Битрейт: {0}'}"/>
+                </StackPanel>
+            </Grid>
+        </GroupBox>
+    </Grid>
+</Window>
